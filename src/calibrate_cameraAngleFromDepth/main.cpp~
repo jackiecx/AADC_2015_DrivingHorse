@@ -1,0 +1,130 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <cmath>
+
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core/types_c.h>
+#include <opencv2/imgproc/imgproc.hpp>
+
+using namespace std;
+using namespace cv;
+
+typedef int 			tResult;
+typedef float 			tFloat32;
+typedef int 			tInt32;
+typedef unsigned int 	tUInt32;
+typedef bool 			tBool;
+
+#define tTrue	true
+#define tFalse	false
+#define RETURN_NOERROR	return 0;
+#define RETURN_ERROR	return 1;
+
+int main(int argc, char **argv) {
+	cv::Mat imgGrdX, imgGrdY, imgGrdM;	// x - y - magnitude
+	cv::Mat imgLineS;
+	cv::Mat imgRoad;
+	for (int nFrames=1; nFrames < 2000; nFrames++) {
+		char fnIn[80];
+		sprintf(fnIn, "/home/behmann/aadc/top_view/data/dep_%04d.png", nFrames);
+		Mat imgDep = imread(fnIn);
+		sprintf(fnIn, "/home/behmann/aadc/top_view/data/rgb_%04d.png", nFrames);
+		Mat imgSrc = imread(fnIn);
+		
+		imgDep = imread("depth_test.png");
+		
+		cv::imshow("imgSrc", imgSrc);
+		cv::imshow("imgDep", imgDep);
+		cv::waitKey();
+		
+		tInt32 m_depStartRow = 120;
+		std::vector<cv::Point> binPoint;
+		for (tInt32 i = m_depStartRow; i < imgDep.rows; ++i) {
+			unsigned short *pDep = imgDep.ptr<unsigned short>(i);
+			for (tInt32 j = 0; j < imgDep.cols; ++j) {
+				if (pDep[j] > 0 && pDep[j] < 65535) {
+					binPoint.push_back(cv::Point(imgDep.rows-i, pDep[j]));
+				}
+			}
+		}
+		
+		//for (size_t i = 0; i < binPoint.size(); i++) std::cout << binPoint[i] << std::endl;
+		
+		cv::Vec4f lineBest;
+		cv::fitLine(binPoint, lineBest, CV_DIST_L12, 0, 0.01, 0.01);
+		
+		std::cout << "best line: " << lineBest << ", ang = " << 128.f/M_PI*atan2(lineBest[0], lineBest[1]) << std::endl;
+		
+		tFloat32 depMean = 0;
+		tUInt32 nDep = 0;
+		unsigned short* pDep = (unsigned short*)imgDep.data;
+		for (int i = imgDep.rows/2-1; i < imgDep.rows/2+1; ++i) {
+			for (int j = 0; j < imgDep.cols; j++) {
+				unsigned short tmp = pDep[i*imgDep.cols+j];
+				if (pDep) {
+					depMean += (tFloat32)pDep[i*imgDep.cols+j];
+					nDep++;
+				}
+			}
+		}
+		
+		depMean = depMean / nDep;
+		
+		tFloat32 alpha = asin(200/depMean);
+		
+		std::cout << "ALPHA: " << alpha << std::endl;
+		
+		
+		
+		
+		/*double alpha_approx = atan2(lineBest[1], lineBest[0]);
+		
+		// --- GET HOMOGRAPHY --- //
+		double alpha = -(90-alpha_approx/2)/180.0*M_PI;
+		double f = 400;
+		double dist = 200;
+		double w = imgSrc.size().width;
+		double h = imgSrc.size().height;
+
+		// Projection 2D -> 3D matrix
+		Mat A1 = (Mat_<double>(4,3) <<
+			1, 0, -w/2,
+			0, 1, -h/2,
+			0, 0,    0,
+			0, 0,    1);
+
+		// Rotation matrices around the X,Y,Z axis
+		Mat R = (Mat_<double>(4, 4) <<
+			1,          0,           0, 0,
+			0, cos(alpha), -sin(alpha), 0,
+			0, sin(alpha),  cos(alpha), 0,
+			0,          0,           0, 1);
+
+		// Translation matrix on the Z axis change dist will change the height
+		Mat T = (Mat_<double>(4, 4) <<
+			1, 0, 0, 0,
+			0, 1, 0, 0,
+			0, 0, 1, dist,
+			0, 0, 0, 1);
+
+		// Camera Intrisecs matrix 3D -> 2D
+		Mat A2 = (Mat_<double>(3,4) <<
+			f, 0, w/2, 0,
+			0, f, h/2, 0,
+			0, 0,   1, 0);
+
+		// Final and overall transformation matrix
+		Mat H = A2 * (T * (R * A1));
+
+
+		// Apply matrix transformation
+		cv::Mat imgWarp;
+		warpPerspective(imgSrc, imgWarp, H, imgSrc.size(), INTER_CUBIC | WARP_INVERSE_MAP);
+		
+		imshow("imgWarp", imgWarp);
+		cv::waitKey();*/
+		
+	}
+}

@@ -1,0 +1,13 @@
+set(FILTER_NAME DH_CruiseControl)
+
+# add the source
+adtf_add_filter(${FILTER_NAME}
+                stdafx.cpp
+                stdafx.h
+                cDHCruiseControl.h
+                cDHCruiseControl.cpp
+ )
+
+
+# Specify where it should be installed to
+adtf_install_plugin(${FILTER_NAME} ${AADC_INSTALL_DIR})

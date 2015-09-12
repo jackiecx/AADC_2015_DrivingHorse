@@ -1,0 +1,13 @@
+include_directories(./include)
+
+add_subdirectory(DH_laneAssistant)
+add_subdirectory(DH_driverModule)
+add_subdirectory(DH_crossing)
+add_subdirectory(DH_parallelParking)
+add_subdirectory(DH_light)
+add_subdirectory(DH_smoothing)
+add_subdirectory(DH_IIR)
+add_subdirectory(DH_CruiseControl)
+add_subdirectory(DH_emergencyBreak)
+add_subdirectory(DH_changeLine)
+add_subdirectory(DH_checkTraffic)

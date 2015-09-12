@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="iso-8859-1" standalone="no"?>
+<adtf:project xmlns:adtf="adtf">
+	<general_settings>
+		<property name="active_configuration" type="String" value="Main" />
+		<property name="enable_messagebus" type="Bool" value="true" />
+		<property name="synchronizing_type" type="Int" value="1" />
+		<property name="media_description_files" type="String" value="./../description/*.description;./../addons/*/description/*.description;./../src/examples/src/description/*.description;../../../../src/adtfBase/AADC_ADTF_BaseFilters/description/aadc.description;../../../../src/adtfUser/demo/description/aadcImgProc.description" />
+	</general_settings>
+	<configurations>
+		<configuration description="" name="Image_Process">
+			<graph>
+				<inport alias="image_in" />
+				<outport alias="struct_out" />
+			</graph>
+		</configuration>
+		<configuration description="" name="Main">
+			<graph>
+				<filter alias="AADC_Attitude_Converter" idref="adtf.aadc.quaternion" priority="13" />
+				<filter alias="AADC_Calibration_Scaling" idref="adtf.aadc.calibrationScaling" priority="19">
+					<settings>
+						<property name="Scale Factor" type="Float" value="57.29578" />
+					</settings>
+				</filter>
+				<filter alias="AADC_Calibration_Scaling2" idref="adtf.aadc.calibrationScaling" priority="20">
+					<settings>
+						<property name="Scale Factor" type="Float" value="57.29578" />
+					</settings>
+				</filter>
+				<filter alias="AADC_Calibration_Scaling3" idref="adtf.aadc.calibrationScaling" priority="21">
+					<settings>
+						<property name="Scale Factor" type="Float" value="57.29578" />
+					</settings>
+				</filter>
+				<connection connection_priority="50" dest="AADC_Calibration_Scaling.input_value" interface="" source="AADC_Attitude_Converter.yaw" />
+				<connection connection_priority="50" dest="AADC_Calibration_Scaling2.input_value" interface="" source="AADC_Attitude_Converter.pitch" />
+				<connection connection_priority="50" dest="AADC_Calibration_Scaling3.input_value" interface="" source="AADC_Attitude_Converter.roll" />
+				<filter alias="AADC_RPM_Calculation" idref="adtf.aadc.rpmcalculation" priority="6" />
+				<filter alias="AADC_Watchdog_Trigger" idref="adtf.aadc.watchdogGuard" priority="4" />
+				<filter alias="AADC_Calibration_Scaling4" idref="adtf.aadc.calibrationScaling" priority="22">
+					<settings>
+						<property name="Scale Factor" type="Float" value="4.15" />
+					</settings>
+				</filter>
+				<filter alias="AADC_Calibration_Scaling5" idref="adtf.aadc.calibrationScaling" priority="23">
+					<settings>
+						<property name="Scale Factor" type="Float" value="4.15" />
+					</settings>
+				</filter>
+				<filter alias="AADC_Xtion_Camera" idref="adtf.aadc.xtionCaptureDevice" priority="5">
+					<settings>
+						<property name="Configuration File" type="String" value="../../../../calibration_files/xtionSettings.xml" />
+						<property name="active" type="Bool" value="true" />
+					</settings>
+				</filter>
+				<subgraph alias="Base_Config2" idref="Base_Config" priority="8" />
+				<connection connection_priority="50" dest="AADC_Attitude_Converter.quaternion_gyro_x" interface="" source="Base_Config2.GYR_quaternion_gyro_x" />
+				<connection connection_priority="50" dest="AADC_Attitude_Converter.quaternion_gyro_z" interface="" source="Base_Config2.GYR_quaternion_gyro_z" />
+				<connection connection_priority="50" dest="AADC_Attitude_Converter.quaternion_gyro_y" interface="" source="Base_Config2.GYR_quaternion_gyro_y" />
+				<connection connection_priority="50" dest="AADC_RPM_Calculation.wheel_speed_sensor_left" interface="" source="Base_Config2.WH_WheelSpeed_Sensor_Left" />
+				<connection connection_priority="50" dest="AADC_RPM_Calculation.wheel_speed_sensor_right" interface="" source="Base_Config2.WH_WheelSpeed_Sensor_Right" />
+				<connection connection_priority="50" dest="AADC_Calibration_Scaling4.input_value" interface="" source="Base_Config2.WH_WheelSpeed_Sensor_Right" />
+				<connection connection_priority="50" dest="AADC_Calibration_Scaling5.input_value" interface="" source="Base_Config2.WH_WheelSpeed_Sensor_Left" />
+				<connection connection_priority="50" dest="Base_Config2.Watchdog_Alive_Flag" interface="" source="AADC_Watchdog_Trigger.WatchdogAliveSignal" />
+				<filter alias="AADC_Marker_Detection_Filter" idref="adtf.aadc.markerDetectionFilter" priority="12">
+					<settings>
+						<property name="Dictionary File For Markers" type="String" value="../../../../calibration_files/roadsign.yml" />
+					</settings>
+				</filter>
+				<connection connection_priority="50" dest="DH_lineDetector.video_in" interface="" source="AADC_Xtion_Camera.Video_RGB" />
+				<connection connection_priority="50" dest="AADC_Marker_Detection_Filter.Video_RGB_input" interface="" source="AADC_Xtion_Camera.Video_RGB" />
+				<filter alias="DH_lineDetector" idref="adtf.dh.laneAssistant" priority="13">
+					<settings>
+						<property name="Lenkwinkel Glaettung" type="Int" value="15" />
+						<property name="Spurzentrum" type="Int" value="375" />
+						<property name="Startreihe Geradezone" type="Int" value="0" />
+						<property name="Autocenter Y" type="Int" value="150" />
+						<property name="Kamerawinkel" type="Int" value="18" />
+					</settings>
+				</filter>
+				<filter alias="Crossing" idref="adtf.user.CROSSING" priority="14" />
+				<connection connection_priority="50" dest="Crossing.traveled_distance_right" interface="" source="AADC_Calibration_Scaling4.output_value" />
+				<connection connection_priority="50" dest="Crossing.traveled_distance_left" interface="" source="AADC_Calibration_Scaling5.output_value" />
+				<connection connection_priority="50" dest="AADC_Attitude_Converter.quaternion_gyro_w" interface="" source="Base_Config2.GYR_quaternion_gyro_w" />
+				<filter alias="Parallel_Parking" idref="adtf.user.PPARKING" priority="15">
+					<settings>
+						<property name="Winkel 1" type="Float" value="30.0" />
+						<property name="Winkel 2" type="Float" value="30.0" />
+						<property name="Parallel Winkel 1" type="Float" value="25.0" />
+						<property name="Parallel Winkel 2" type="Float" value="25.0" />
+					</settings>
+				</filter>
+				<connection connection_priority="50" dest="Parallel_Parking.ir_rear_center_short" interface="" source="Base_Config2.IR_rear_center_shortrange" />
+				<connection connection_priority="50" dest="Parallel_Parking.ir_front_center_short" interface="" source="Base_Config2.IR_front_center_shortrange" />
+				<connection connection_priority="50" dest="Parallel_Parking.ir_front_center_long" interface="" source="Base_Config2.IR_front_center_longrange" />
+				<connection connection_priority="50" dest="Parallel_Parking.yaw" interface="" source="AADC_Calibration_Scaling.output_value" />
+				<connection connection_priority="50" dest="Parallel_Parking.distance_right" interface="" source="AADC_Calibration_Scaling4.output_value" />
+				<connection connection_priority="50" dest="Parallel_Parking.distance_left" interface="" source="AADC_Calibration_Scaling5.output_value" />
+				<filter alias="IIR_Filter" idref="adtf.user.IIR" priority="16">
+					<settings>
+						<property name="Faktor" type="Float" value="80.0" />
+					</settings>
+				</filter>
+				<connection connection_priority="50" dest="Parallel_Parking.ir_front_right_short" interface="" source="IIR_Filter.output_value" />
+				<connection connection_priority="50" dest="IIR_Filter.input_value" interface="" source="Base_Config2.IR_front_right_shortrange" />
+				<filter alias="DH_CruiseControl" idref="adtf.dh.CruiseControl" priority="16" />
+				<connection connection_priority="50" dest="DH_CruiseControl.RPM_left_in" interface="" source="AADC_RPM_Calculation.RPM_left_Wheel" />
+				<connection connection_priority="50" dest="DH_CruiseControl.RPM_right_in" interface="" source="AADC_RPM_Calculation.RPM_right_Wheel" />
+				<connection connection_priority="50" dest="Base_Config2.accelerate" interface="" source="DH_CruiseControl.acc_out" />
+				<filter alias="DH_light2" idref="adtf.dh.light" priority="18" />
+				<filter alias="Notbremsen" idref="adtf.user.Notbremse" priority="19">
+					<settings>
+						<property name="Slow down to 15 Distance" type="Float" value="20.0" />
+						<property name="Slow down to 25 Distance" type="Float" value="25.0" />
+						<property name="Stuck Distance" type="Float" value="70.0" />
+					</settings>
+				</filter>
+				<connection connection_priority="50" dest="Base_Config2.reverseLightsEnabled" interface="" source="DH_light2.reverseLight_out" />
+				<connection connection_priority="50" dest="Base_Config2.brakeLightEnabled" interface="" source="DH_light2.brakelight_out" />
+				<connection connection_priority="50" dest="Base_Config2.headLightEnabled" interface="" source="DH_light2.headLight_out" />
+				<connection connection_priority="50" dest="DH_CruiseControl.acc_in" interface="" source="Notbremsen.accelerate_out" />
+				<connection connection_priority="50" dest="DH_light2.acc_in" interface="" source="Notbremsen.accelerate_out" />
+				<filter alias="IIR_Filter2" idref="adtf.user.IIR" priority="16">
+					<settings>
+						<property name="Faktor" type="Float" value="70.0" />
+					</settings>
+				</filter>
+				<filter alias="IIR_Filter3" idref="adtf.user.IIR" priority="16">
+					<settings>
+						<property name="Faktor" type="Float" value="20.0" />
+					</settings>
+				</filter>
+				<filter alias="IIR_Filter4" idref="adtf.user.IIR" priority="16">
+					<settings>
+						<property name="Faktor" type="Float" value="20.0" />
+					</settings>
+				</filter>
+				<connection connection_priority="50" dest="IIR_Filter2.input_value" interface="" source="Base_Config2.IR_front_right_longrange" />
+				<connection connection_priority="50" dest="Notbremsen.ir_front_center_long" interface="" source="IIR_Filter2.output_value" />
+				<connection connection_priority="50" dest="Notbremsen.ir_front_center_short" interface="" source="IIR_Filter3.output_value" />
+				<connection connection_priority="50" dest="IIR_Filter4.input_value" interface="" source="Base_Config2.IR_rear_center_shortrange" />
+				<connection connection_priority="50" dest="Notbremsen.ir_rear_center_short" interface="" source="IIR_Filter4.output_value" />
+				<connection connection_priority="50" dest="IIR_Filter3.input_value" interface="" source="Base_Config2.IR_front_center_shortrange" />
+				<filter alias="DH_Driver_Module2" idref="adtf.dh.driverModule" priority="22">
+					<settings>
+						<property name="ManeuverFile" type="String" value="../../JuryConfig/files/Maneuverlist.xml" />
+					</settings>
+				</filter>
+				<filter alias="Change_Line" idref="adtf.user.CHANGELINE" priority="23" />
+				<filter alias="IIR_Filter5" idref="adtf.user.IIR" priority="16">
+					<settings>
+						<property name="Faktor" type="Float" value="80.0" />
+					</settings>
+				</filter>
+				<connection connection_priority="50" dest="DH_Driver_Module2.Jury_Struct" interface="" source="Base_Config2.Jury_Struct" />
+				<connection connection_priority="50" dest="DH_Driver_Module2.roadSign_in" interface="" source="AADC_Marker_Detection_Filter.RoadSign" />
+				<connection connection_priority="50" dest="DH_Driver_Module2.crossing_ang_in" interface="" source="Crossing.steering_angle" />
+				<connection connection_priority="50" dest="DH_Driver_Module2.parking_ang_in" interface="" source="Parallel_Parking.steerAngle" />
+				<connection connection_priority="50" dest="DH_Driver_Module2.parking_acc_in" interface="" source="Parallel_Parking.accelerate_out" />
+				<connection connection_priority="50" dest="DH_Driver_Module2.lineChange_ang_in" interface="" source="Change_Line.steerAngle" />
+				<connection connection_priority="50" dest="DH_Driver_Module2.stuck_in" interface="" source="Notbremsen.got_stuck" />
+				<connection connection_priority="50" dest="Base_Config2.Driver_Struct" interface="" source="DH_Driver_Module2.Driver_Struct" />
+				<connection connection_priority="50" dest="Notbremsen.accelerate_in" interface="" source="DH_Driver_Module2.acc_out" />
+				<connection connection_priority="50" dest="Base_Config2.turnSignalLeftEnabled" interface="" source="DH_Driver_Module2.turnSignalLeft_out" />
+				<connection connection_priority="50" dest="Base_Config2.turnSignalRightEnabled" interface="" source="DH_Driver_Module2.turnSignalRight_out" />
+				<connection connection_priority="50" dest="Base_Config2.hazzardLightsEnabled" interface="" source="DH_Driver_Module2.turnSignalBoth_out" />
+				<connection connection_priority="50" dest="Parallel_Parking.activate_parallel_parking" interface="" source="DH_Driver_Module2.parallel_parking_out" />
+				<connection connection_priority="50" dest="Parallel_Parking.activate_cross_parking" interface="" source="DH_Driver_Module2.cross_parking_out" />
+				<connection connection_priority="50" dest="Parallel_Parking.reset" interface="" source="DH_Driver_Module2.reset_out" />
+				<connection connection_priority="50" dest="Change_Line.reset" interface="" source="DH_Driver_Module2.reset_out" />
+				<connection connection_priority="50" dest="Change_Line.crossing_type" interface="" source="DH_Driver_Module2.lineChangeTrigger_out" />
+				<connection connection_priority="50" dest="Change_Line.yaw" interface="" source="AADC_Calibration_Scaling.output_value" />
+				<connection connection_priority="50" dest="Change_Line.distance_right" interface="" source="AADC_Calibration_Scaling4.output_value" />
+				<connection connection_priority="50" dest="Change_Line.distance_left" interface="" source="AADC_Calibration_Scaling5.output_value" />
+				<connection connection_priority="50" dest="IIR_Filter5.input_value" interface="" source="Base_Config2.IR_rear_right_shortrange" />
+				<connection connection_priority="50" dest="Change_Line.ir_rear_right_short" interface="" source="IIR_Filter5.output_value" />
+				<connection connection_priority="50" dest="Change_Line.ir_front_right_short" interface="" source="IIR_Filter.output_value" />
+				<connection connection_priority="50" dest="Change_Line.ir_front_right_long" interface="" source="Base_Config2.IR_front_right_longrange" />
+				<filter alias="check_Traffic" idref="adtf.user.CHECKTRAFFIC" priority="24" />
+				<connection connection_priority="50" dest="check_Traffic.reset" interface="" source="DH_Driver_Module2.reset_out" />
+				<connection connection_priority="50" dest="check_Traffic.crossing_type_in" interface="" source="DH_Driver_Module2.crossingTrigger_out" />
+				<connection connection_priority="50" dest="Crossing.crossing_type" interface="" source="check_Traffic.crossing_type_out" />
+				<connection connection_priority="50" dest="DH_Driver_Module2.crossing_acc_in" interface="" source="Crossing.acceleration" />
+				<connection connection_priority="50" dest="check_Traffic.ir_front_center_long" interface="" source="IIR_Filter2.output_value" />
+				<connection connection_priority="50" dest="check_Traffic.ir_front_center_short" interface="" source="IIR_Filter3.output_value" />
+				<connection connection_priority="50" dest="check_Traffic.range_front_right" interface="" source="Base_Config2.US_range_front_right" />
+				<connection connection_priority="50" dest="check_Traffic.range_front_left" interface="" source="Base_Config2.US_range_front_left" />
+				<connection connection_priority="50" dest="Base_Config2.steerAngle" interface="" source="DH_Driver_Module2.ang_out" />
+				<connection connection_priority="50" dest="DH_Driver_Module2.laneAssist_ang_in" interface="" source="DH_lineDetector.steering_angle" />
+				<connection connection_priority="50" dest="Crossing.reset" interface="" source="DH_Driver_Module2.reset_out" />
+				<connection connection_priority="50" dest="Notbremsen.reset" interface="" source="DH_Driver_Module2.reset_out" />
+			</graph>
+		</configuration>
+		<configuration description="" name="camera">
+			<graph>
+				<filter alias="Video_Display" idref="adtf.visual.video_display" priority="1" />
+			</graph>
+		</configuration>
+	</configurations>
+	<fileinfo adtfversion="2.12.1beta" configversion="1.3" />
+	<configuration_settings />
+	<adtf_include source="../../BaseConfig/IncludeConfig.xml" />
+</adtf:project>

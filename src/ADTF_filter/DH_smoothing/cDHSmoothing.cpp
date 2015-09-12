@@ -1,0 +1,105 @@
+#include "stdafx.h"
+#include "cDHSmoothing.h"
+
+ADTF_FILTER_PLUGIN("DH Smoothing", OID_ADTF_DHSMOOTHING_FILTER, cDHSmoothing);
+
+cDHSmoothing::cDHSmoothing(const tChar* __info):cFilter(__info) {
+	/*SetPropertyFloat("Faktor", faktor);
+	SetPropertyFloat("Faktor" NSSUBPROP_REQUIRED, tTrue);*/
+	
+	c = 0;
+}
+
+cDHSmoothing::~cDHSmoothing() {}
+
+tResult cDHSmoothing::Init(tInitStage eStage, __exception) {
+    RETURN_IF_FAILED(cFilter::Init(eStage, __exception_ptr))
+    
+    if (eStage == StageFirst) {
+		cObjectPtr<IMediaDescriptionManager> pDescManager;
+		RETURN_IF_FAILED(_runtime->GetObject(OID_ADTF_MEDIA_DESCRIPTION_MANAGER,IID_ADTF_MEDIA_DESCRIPTION_MANAGER,(tVoid**)&pDescManager,__exception_ptr));
+		    
+		//input descriptor
+		tChar const * strDescSignalValue = pDescManager->GetMediaDescription("tSignalValue");
+		RETURN_IF_POINTER_NULL(strDescSignalValue);        
+		cObjectPtr<IMediaType> pTypeSignalValue = new cMediaType(0, 0, 0, "tSignalValue", strDescSignalValue,IMediaDescription::MDF_DDL_DEFAULT_VERSION);	
+		RETURN_IF_FAILED(pTypeSignalValue->GetInterface(IID_ADTF_MEDIA_TYPE_DESCRIPTION, (tVoid**)&m_pCoderDescSignalValue)); 
+		
+		// create and register the input pin
+		RETURN_IF_FAILED(iPin_value.Create("value_in", pTypeSignalValue, static_cast<IPinEventSink*> (this)));
+		RETURN_IF_FAILED(RegisterPin(&iPin_value));
+
+		// create and register the output pin
+		RETURN_IF_FAILED(oPin_value.Create("value_out", pTypeSignalValue, static_cast<IPinEventSink*> (this)));
+		RETURN_IF_FAILED(RegisterPin(&oPin_value));
+    } else if (eStage == StageNormal) {} else if (eStage == StageGraphReady) {}
+
+    RETURN_NOERROR;
+}
+
+tResult cDHSmoothing::Shutdown(tInitStage eStage, __exception) {
+    if (eStage == StageGraphReady) {}
+    else if (eStage == StageNormal) {}
+    else if (eStage == StageFirst) {}
+
+    // call the base class implementation
+    return cFilter::Shutdown(eStage, __exception_ptr);
+}
+
+tResult cDHSmoothing::OnPinEvent(IPin* pSource, tInt nEventCode, tInt nParam1, tInt nParam2, IMediaSample* pMediaSample) {
+	RETURN_IF_POINTER_NULL(pMediaSample);
+	RETURN_IF_POINTER_NULL(pSource);
+
+	if (nEventCode == IPinEventSink::PE_MediaSampleReceived) {	
+		tUInt32 ui32ArduinoTimestamp = 0;
+		tFloat32 f32Value = 0;
+		
+		if (m_pCoderDescSignalValue != NULL) {
+	        {   // focus for sample read lock
+	            __adtf_sample_read_lock_mediadescription(m_pCoderDescSignalValue,pMediaSample,pCoder);
+
+				pCoder->Get("ui32ArduinoTimestamp", (tVoid*)&ui32ArduinoTimestamp);
+	            pCoder->Get("f32Value", (tVoid*)&f32Value);
+	        }
+	        
+			++c %= 3;
+			m_value[c] = f32Value;
+			
+			tFloat32 value = (m_value[c]+m_value[(c+1)%3]+m_value[(c+2)%3])/3;
+			
+			TransmitValue(value);
+			
+			
+	    }
+    }
+	RETURN_NOERROR;
+}
+
+tResult cDHSmoothing::TransmitValue(float value) {
+    tFloat32 flValue= (tFloat32)(value);
+    tUInt32 timeStamp = 0;
+                            
+    //create new media sample
+    cObjectPtr<IMediaSample> pMediaSample;
+    AllocMediaSample((tVoid**)&pMediaSample);
+
+    //allocate memory with the size given by the descriptor
+    cObjectPtr<IMediaSerializer> pSerializer;
+    m_pCoderDescSignalValue->GetMediaSampleSerializer(&pSerializer);
+    tInt nSize = pSerializer->GetDeserializedSize();
+    pMediaSample->AllocBuffer(nSize);
+       
+    //write date to the media sample with the coder of the descriptor
+    {
+        __adtf_sample_write_lock_mediadescription(m_pCoderDescSignalValue, pMediaSample, pCoder);
+        
+        pCoder->Set("f32Value", (tVoid*)&(flValue));    
+        pCoder->Set("ui32ArduinoTimestamp", (tVoid*)&timeStamp);    
+    }
+    
+    //transmit media sample over output pin
+    pMediaSample->SetTime(_clock->GetStreamTime());
+    oPin_value.Transmit(pMediaSample);
+	
+    RETURN_NOERROR;
+}

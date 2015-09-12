@@ -1,0 +1,35 @@
+#ifndef _BRAKELIGHT_H_
+#define _BRAKELIGHT_H_
+
+#define OID_ADTF_DHLIGHT_FILTER "adtf.dh.light"
+
+//*************************************************************************************************
+class cDHLight : public adtf::cFilter
+{
+    ADTF_FILTER(OID_ADTF_DHLIGHT_FILTER, "DH light", adtf::OBJCAT_DataFilter);
+
+	public:
+		cDHLight(const tChar* __info);
+		virtual ~cDHLight();
+
+	protected:
+		tResult Init(tInitStage eStage, __exception);
+		tResult Shutdown(tInitStage eStage, __exception);
+
+		tResult OnPinEvent(IPin* pSource, tInt nEventCode, tInt nParam1, tInt nParam2, IMediaSample* pMediaSample);
+	private:
+		cInputPin	iPin_rpmLeft;
+		cInputPin 	iPin_rpmRight;
+		cInputPin 	iPin_acc;
+	
+		cOutputPin	oPin_brakeLight;
+		cOutputPin	oPin_headLight;
+		cOutputPin	oPin_reverseLight;
+		
+		cObjectPtr<IMediaTypeDescription> m_pCoderDescSignalValue;
+		cObjectPtr<IMediaTypeDescription> m_pCoderDescBoolSignalValue;
+
+};
+
+//*************************************************************************************************
+#endif

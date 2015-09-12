@@ -1,0 +1,35 @@
+#ifndef _DHSMOOTHING_H_
+#define _DHSMOOTHING_H_
+
+#define OID_ADTF_DHSMOOTHING_FILTER "adtf.dh.smoothing"
+
+//*************************************************************************************************
+class cDHSmoothing : public adtf::cFilter
+{
+    ADTF_FILTER(OID_ADTF_DHLIGHT_FILTER, "DH Smoothing", adtf::OBJCAT_DataFilter);
+
+	public:
+		cDHSmoothing(const tChar* __info);
+		virtual ~cDHSmoothing();
+
+	protected:
+		tResult Init(tInitStage eStage, __exception);
+		tResult Shutdown(tInitStage eStage, __exception);
+
+		tResult OnPinEvent(IPin* pSource, tInt nEventCode, tInt nParam1, tInt nParam2, IMediaSample* pMediaSample);
+	private:
+		cInputPin	iPin_value;
+	
+		cOutputPin	oPin_value;
+		
+		cObjectPtr<IMediaTypeDescription> m_pCoderDescSignalValue;
+		
+		tFloat32 	m_value[3];
+		tUInt8		c;
+		
+		tResult TransmitValue(float value);
+};
+
+
+//*************************************************************************************************
+#endif

@@ -1,0 +1,25 @@
+#ifndef LINE_DETECTION_H
+#define LINE_DETECTION_H
+
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+
+using namespace cv;
+
+struct ConnectedComponent
+{
+    Point starting_point;
+    Point min_expansion_point;
+    Point max_expansion_point;
+    int label;
+    int number_of_pixels;
+};
+
+
+void detectWhiteRegions(Mat &input_image, Mat &output_image, int tau);
+void removeSmallRegions(Mat &white_regions, std::vector<ConnectedComponent>& connected_components, int threshold_size);
+void markLinesAsCentralOrRightByMajorityVote(Mat &imgTh, std::vector<ConnectedComponent>& binCC, Mat &imgLines);
+
+void determineConnectedComponents(Mat &white_regions, std::vector<ConnectedComponent>& connected_components);
+#endif // LINE_DETECTION_H

@@ -1,0 +1,187 @@
+#include "stdafx.h"
+#include "cDHLight.h"
+
+ADTF_FILTER_PLUGIN("DH Light", OID_ADTF_DHLIGHT_FILTER, cDHLight);
+
+cDHLight::cDHLight(const tChar* __info):cFilter(__info) {
+	/*SetPropertyFloat("Faktor", faktor);
+	SetPropertyFloat("Faktor" NSSUBPROP_REQUIRED, tTrue);*/
+	
+	cLeft = 0;
+	cRight = 0;
+}
+
+cDHLight::~cDHLight() {}
+
+tResult cDHLight::Init(tInitStage eStage, __exception) {
+    RETURN_IF_FAILED(cFilter::Init(eStage, __exception_ptr))
+    
+    if (eStage == StageFirst) {
+		cObjectPtr<IMediaDescriptionManager> pDescManager;
+		RETURN_IF_FAILED(_runtime->GetObject(OID_ADTF_MEDIA_DESCRIPTION_MANAGER,IID_ADTF_MEDIA_DESCRIPTION_MANAGER,(tVoid**)&pDescManager,__exception_ptr));
+		    
+		//input descriptor
+		tChar const * strDescSignalValue = pDescManager->GetMediaDescription("tSignalValue");
+		RETURN_IF_POINTER_NULL(strDescSignalValue);        
+		cObjectPtr<IMediaType> pTypeSignalValue = new cMediaType(0, 0, 0, "tSignalValue", strDescSignalValue,IMediaDescription::MDF_DDL_DEFAULT_VERSION);	
+		RETURN_IF_FAILED(pTypeSignalValue->GetInterface(IID_ADTF_MEDIA_TYPE_DESCRIPTION, (tVoid**)&m_pCoderDescSignalValue)); 
+		
+		tChar const * strDescBoolSignalValue = pDescManager->GetMediaDescription("tBoolSignalValue");
+		RETURN_IF_POINTER_NULL(strDescBoolSignalValue);        
+		cObjectPtr<IMediaType> pTypeBoolSignalValue = new cMediaType(0, 0, 0, "tBoolSignalValue", strDescBoolSignalValue,IMediaDescription::MDF_DDL_DEFAULT_VERSION);	
+		RETURN_IF_FAILED(pTypeBoolSignalValue->GetInterface(IID_ADTF_MEDIA_TYPE_DESCRIPTION, (tVoid**)&m_pCoderDescBoolSignalValue)); 
+	
+		// create and register the input pin
+		RETURN_IF_FAILED(iPin_rpmLeft.Create("rpmLeft_in", pTypeSignalValue, static_cast<IPinEventSink*> (this)));
+		RETURN_IF_FAILED(RegisterPin(&iPin_rpmLeft));
+		RETURN_IF_FAILED(iPin_rpmRight.Create("rpmRight_in", pTypeSignalValue, static_cast<IPinEventSink*> (this)));
+		RETURN_IF_FAILED(RegisterPin(&iPin_rpmRight));
+		RETURN_IF_FAILED(iPin_acc.Create("acc_in", pTypeSignalValue, static_cast<IPinEventSink*> (this)));
+		RETURN_IF_FAILED(RegisterPin(&iPin_acc));
+
+		// create and register the output pin
+		RETURN_IF_FAILED(oPin_brakeLight.Create("brakelight_out", pTypeBoolSignalValue, static_cast<IPinEventSink*> (this)));
+		RETURN_IF_FAILED(RegisterPin(&oPin_brakeLight));
+		RETURN_IF_FAILED(oPin_headLight.Create("headLight_out", pTypeBoolSignalValue, static_cast<IPinEventSink*> (this)));
+		RETURN_IF_FAILED(RegisterPin(&oPin_headLight));
+		RETURN_IF_FAILED(oPin_reverseLight.Create("reverseLight_out", pTypeBoolSignalValue, static_cast<IPinEventSink*> (this)));
+		RETURN_IF_FAILED(RegisterPin(&oPin_reverseLight));
+		
+		TransmitHeadLight(tTrue);
+    } else if (eStage == StageNormal) {} else if (eStage == StageGraphReady) {}
+
+    RETURN_NOERROR;
+}
+
+tResult cDHLight::Shutdown(tInitStage eStage, __exception) {
+    if (eStage == StageGraphReady) {}
+    else if (eStage == StageNormal) {}
+    else if (eStage == StageFirst) {}
+
+    // call the base class implementation
+    return cFilter::Shutdown(eStage, __exception_ptr);
+}
+
+tResult cDHLight::TransmitBrakeLight(tBool state) {
+    //write values with zero
+    tUInt32 timeStamp = 0;
+    
+    //create new media sample
+    cObjectPtr<IMediaSample> pMediaSample;
+    AllocMediaSample((tVoid**)&pMediaSample);
+
+    //allocate memory with the size given by the descriptor
+    cObjectPtr<IMediaSerializer> pSerializer;
+    m_pCoderDescBoolSignalValue->GetMediaSampleSerializer(&pSerializer);
+    tInt nSize = pSerializer->GetDeserializedSize();
+    pMediaSample->AllocBuffer(nSize);
+       
+    //write date to the media sample with the coder of the descriptor
+    {
+        __adtf_sample_read_lock_mediadescription(m_pCoderDescBoolSignalValue, pMediaSample, pCoderOutput);
+
+        pCoderOutput->Set("bValue", (tVoid*)&(state));    
+        pCoderOutput->Set("ui32ArduinoTimestamp", (tVoid*)&timeStamp);    
+    }
+
+    //transmit media sample over output pin
+    pMediaSample->SetTime(_clock->GetStreamTime());
+	oPin_brakeLight.Transmit(pMediaSample);
+
+    RETURN_NOERROR;
+}
+
+tResult cDHLight::TransmitHeadLight(tBool) {
+    //write values with zero
+    tUInt32 timeStamp = 0;
+    
+    //create new media sample
+    cObjectPtr<IMediaSample> pMediaSample;
+    AllocMediaSample((tVoid**)&pMediaSample);
+
+    //allocate memory with the size given by the descriptor
+    cObjectPtr<IMediaSerializer> pSerializer;
+    m_pCoderDescBoolSignalValue->GetMediaSampleSerializer(&pSerializer);
+    tInt nSize = pSerializer->GetDeserializedSize();
+    pMediaSample->AllocBuffer(nSize);
+       
+    //write date to the media sample with the coder of the descriptor
+    {
+        __adtf_sample_read_lock_mediadescription(m_pCoderDescBoolSignalValue, pMediaSample, pCoderOutput);
+
+        pCoderOutput->Set("bValue", (tVoid*)&(state));    
+        pCoderOutput->Set("ui32ArduinoTimestamp", (tVoid*)&timeStamp);    
+    }
+
+    //transmit media sample over output pin
+    pMediaSample->SetTime(_clock->GetStreamTime());
+	oPin_headLight.Transmit(pMediaSample);
+
+    RETURN_NOERROR;
+}
+
+tResult cDHLight::TransmitReverseLight(tBool) {
+    //write values with zero
+    tUInt32 timeStamp = 0;
+    
+    //create new media sample
+    cObjectPtr<IMediaSample> pMediaSample;
+    AllocMediaSample((tVoid**)&pMediaSample);
+
+    //allocate memory with the size given by the descriptor
+    cObjectPtr<IMediaSerializer> pSerializer;
+    m_pCoderDescBoolSignalValue->GetMediaSampleSerializer(&pSerializer);
+    tInt nSize = pSerializer->GetDeserializedSize();
+    pMediaSample->AllocBuffer(nSize);
+       
+    //write date to the media sample with the coder of the descriptor
+    {
+        __adtf_sample_read_lock_mediadescription(m_pCoderDescBoolSignalValue, pMediaSample, pCoderOutput);
+
+        pCoderOutput->Set("bValue", (tVoid*)&(state));    
+        pCoderOutput->Set("ui32ArduinoTimestamp", (tVoid*)&timeStamp);    
+    }
+
+    //transmit media sample over output pin
+    pMediaSample->SetTime(_clock->GetStreamTime());
+	oPin_reverseLight.Transmit(pMediaSample);
+
+    RETURN_NOERROR;
+}
+
+tResult cDHLight::OnPinEvent(IPin* pSource, tInt nEventCode, tInt nParam1, tInt nParam2, IMediaSample* pMediaSample) {
+	RETURN_IF_POINTER_NULL(pMediaSample);
+	RETURN_IF_POINTER_NULL(pSource);
+
+	if (nEventCode == IPinEventSink::PE_MediaSampleReceived) {	
+		tUInt32 ui32ArduinoTimestamp = 0;
+		tFloat32 f32Value = 0;
+		
+		if (m_pCoderDescSignalValue != NULL) {
+	        {   // focus for sample read lock
+	            __adtf_sample_read_lock_mediadescription(m_pCoderDescSignalValue,pMediaSample,pCoder);
+
+				pCoder->Get("ui32ArduinoTimestamp", (tVoid*)&ui32ArduinoTimestamp);
+	            pCoder->Get("f32Value", (tVoid*)&f32Value);
+	        }
+	        
+	        if (pSource == &iPin_rpmLeft || pSource == &iPin_rpmRight ) {
+				if (pSource == &iPin_rpmLeft) {
+					++cLeft %= 2;
+					m_rpmLeft[cLeft] = f32Value;
+				} else {
+					++cRight %= 2;
+					m_rpmRight[cRight] = f32Value;
+			    }
+			    
+			    tFloat32 mDif = (m_rpmLeft[(cLeft+1)%2] + m_rpmRight[(cRight+1)%2])/2 - (m_rpmLeft[cLeft] + m_rpmRight[cRight])/2;
+			    
+			    TransmitBrakeLight((tBool)(mDif > 0));
+			    
+			} else if (pSource == &iPin_acc ) {
+			    TransmitReverseLight((tBool)(f32Value < 0));
+			}
+	    }
+    }
+	RETURN_NOERROR;
+}
